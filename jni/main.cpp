@@ -122,7 +122,7 @@ Screen::Screen() {
   buf_ = cv::Mat(cv::Size(vscreeninfo.xres, vscreeninfo.yres), CV_8UC4, data, fscreeninfo.line_length);
 }
 
-const double kThreshold = 0.01;
+const double kThreshold = 0.03;
 const cv::Point kVoidPoint(-1, -1);
 const int kSleepMs = 1;
 
@@ -141,25 +141,25 @@ struct Command {
 
 int main() {
   Command commands[] = {
-    // {"000", cv::Point(233, 402)},
-    // {"001", cv::Point(366, 428), kThreshold, cv::Point(360, 640)},
-    // {"002", cv::Point(56, 309)},
-    // {"003", cv::Point(55, 311)},
-    // {"004", cv::Point(148, 673)},
-    // {"100", cv::Point(648, 1128)},
-    // {"101", cv::Point(179, 665)},
-    // {"102", cv::Point(74, 845), kThreshold, kVoidPoint, 500},
-    {"102", kThreshold, kVoidPoint, 500},
-    {"100"},
-    {"101"},
-    {"104"},
-    {"105"},
-    {"106"},
-    {"107"},
-    {"100"},
-    {"101"},
-    {"108"},
-    {"109"},
+    {"000", cv::Point(233, 402)},
+    {"001", cv::Point(366, 428), kThreshold, cv::Point(360, 640)},
+    {"002", cv::Point(56, 309)},
+    {"003", cv::Point(55, 311)},
+    {"004", cv::Point(148, 673)},
+    {"100", cv::Point(648, 1128)},
+    {"101", cv::Point(179, 665)},
+    {"102", cv::Point(74, 845), kThreshold, kVoidPoint, 500},
+    {"102", cv::Point(225, 703)  , kThreshold, kVoidPoint, 500},
+    {"100", cv::Point(648, 1128) },
+    {"101", cv::Point(169, 665)  },
+    {"104", cv::Point(60, 951)   },
+    {"105", cv::Point(41, 565)   },
+    {"106", cv::Point(662, 1210) },
+    {"107", cv::Point(209, 611)  },
+    {"100", cv::Point(648, 1128) },
+    {"101", cv::Point(179, 665)  },
+    {"108", cv::Point(659, 1113), 0.02},
+    {"109", cv::Point(211, 708), 0.03},
     {"115", kThreshold, cv::Point(69, 1029)},
     {"116"},
     {"117"},
@@ -181,7 +181,7 @@ int main() {
     {"110"},
     {"118"},
     {"126"},
-    {"127", 0.03},
+    {"127"},
     {"108"},
     {"109"},
     {"128"},
@@ -190,7 +190,7 @@ int main() {
     {"130"},
     {"130"},
     {"110"},
-    {"111"},
+    {"111", kThreshold, kVoidPoint, 500},
     {"111"},
     {"100"},
     {"101"},
