@@ -87,6 +87,7 @@ bool EventDevice::Touch(int x, int y) {
     && SendEvent(0, 0, 0);
 }
 
+// https://gist.github.com/amitn/9658326
 class Screen {
 public:
   Screen();
@@ -124,7 +125,7 @@ Screen::Screen() {
 
 const double kThreshold = 0.03;
 const cv::Point kVoidPoint(-1, -1);
-const int kSleepMs = 1;
+const int kSleepMs = 100;
 
 struct Command {
   std::string temp;
@@ -141,10 +142,10 @@ struct Command {
 
 int main() {
   Command commands[] = {
-    {"000", cv::Point(233, 402)},
+    {"000", cv::Point(233, 402), kThreshold, kVoidPoint, 1000},
     {"001", cv::Point(366, 428), kThreshold, cv::Point(360, 640)},
     {"002", cv::Point(56, 309)},
-    {"003", cv::Point(55, 311)},
+    {"003", cv::Point(161, 451)},
     {"004", cv::Point(148, 673)},
     {"100", cv::Point(648, 1128)},
     {"101", cv::Point(179, 665)},
@@ -154,76 +155,74 @@ int main() {
     {"101", cv::Point(169, 665)  },
     {"104", cv::Point(60, 951)   },
     {"105", cv::Point(41, 565)   },
-    {"106", cv::Point(662, 1210) },
+    {"106", cv::Point(662, 1210) }, // よくスカるので何度もおす?
     {"107", cv::Point(209, 611)  },
     {"100", cv::Point(648, 1128) },
     {"101", cv::Point(179, 665)  },
     {"108", cv::Point(659, 1113), 0.02},
     {"109", cv::Point(211, 708), 0.03},
-    {"115", kThreshold, cv::Point(69, 1029)},
-    {"116"},
-    {"117"},
-    {"100"},
-    {"101"},
-    {"118"},
-    {"119"},
-    {"120"},
-    {"110", kThreshold, cv::Point(10, 10)},
-    {"122"},
-    {"123"},
-    {"100"},
-    {"101"},
-    {"118"},
-    {"124"},
-    {"118"},
-    {"125"},
-    {"110"},
-    {"110"},
-    {"118"},
-    {"126"},
-    {"127"},
-    {"108"},
-    {"109"},
-    {"128"},
-    {"129"},
-    {"130"},
-    {"130"},
-    {"130"},
-    {"110"},
-    {"111", kThreshold, kVoidPoint, 500},
-    {"111"},
-    {"100"},
-    {"101"},
-    {"110", 0.1},
-    {"131"},
-    {"100", kThreshold, cv::Point(69, 1029)},
-    {"101"},
-    {"132"},
-    {"133_a"},
-    {"133_a"},
-    {"133_done"},
-    {"134"},
-    {"135"},
-    {"134"},
-    {"100"},
-    {"101"},
-    {"137", 10e-4},
-    {"130"},
-    {"130"},
-    {"138"},
-    {"201"},
-    {"123", 0.05},
-    {"134"},
-    {"200"},
-    {"110", 0.05},
-    {"110", 0.05},
-    {"110", 0.05},
-    {"110", 0.05},
-    {"110", 0.05},
-    {"130", 0.08},
-    {"139"},
-    {"140"},
-    {"105", 0.1}
+    {"115", cv::Point(160, 608) , kThreshold, cv::Point(69, 1029)},
+    {"116", cv::Point(50, 961)  },
+    {"117", cv::Point(213, 495) },
+    {"100", cv::Point(648, 1128)},
+    {"101", cv::Point(179, 665) },
+    {"118", cv::Point(52, 975)  },
+    {"119", cv::Point(503, 601) },
+    {"120", cv::Point(83, 706)  },
+    {"110", cv::Point(53, 993)  , kThreshold, cv::Point(10, 10)},
+    {"122", cv::Point(51, 976)  },
+    {"123", cv::Point(116, 1011)},
+    {"100", cv::Point(648, 1128)},
+    {"101", cv::Point(179, 665) },
+    {"118", cv::Point(52, 975)  },
+    {"124", cv::Point(122, 975) },
+    {"118", cv::Point(52, 975)  },
+    {"125", cv::Point(529, 425) },
+    {"110", cv::Point(53, 993)  },
+    {"110", cv::Point(53, 993)  },
+    {"118", cv::Point(52, 975)  },
+    {"126", cv::Point(102, 961) },
+    {"127", cv::Point(81, 612)  },
+    {"108", cv::Point(659, 1113)},
+    {"109", cv::Point(211, 708) },
+    {"128", cv::Point(53, 1031) },
+    {"129", cv::Point(200, 613) },
+    {"130", cv::Point(82, 594)  },
+    {"130", cv::Point(82, 594)  },
+    {"130", cv::Point(82, 594)  },
+    {"110", cv::Point(54, 993)  },
+    {"111", cv::Point(260, 996) , kThreshold, kVoidPoint, 500},
+    {"111", cv::Point(325, 996) },
+    {"100", cv::Point(648, 1128)},
+    {"101", cv::Point(179, 665) },
+    {"110", cv::Point(53, 993)  , 0.1},
+    {"131", cv::Point(123, 676) },
+    {"132", cv::Point(302, 401), kThreshold, cv::Point(69, 1029) },
+    {"133_a", cv::Point(156, 44)},
+    {"133_a", cv::Point(156, 44)},
+    {"133_done", cv::Point(480, 1157)},
+    {"134", cv::Point(92, 611)  },
+    {"135", cv::Point(224, 704) },
+    {"134", cv::Point(227, 611) },
+    {"100", cv::Point(648, 1128)},
+    {"101", cv::Point(179, 665) },
+    {"137", cv::Point(655, 1212), 10e-4},
+    {"130", cv::Point(223, 594) },
+    {"130", cv::Point(110, 594) , kThreshold, kVoidPoint, 2000},
+    {"138", cv::Point(105, 1054)},
+    {"201", cv::Point(133, 935) },
+    {"123", cv::Point(236, 712) , 0.05},
+    {"134", cv::Point(197, 611) },
+    {"200", cv::Point(4, 916)   },
+    {"110", cv::Point(55, 1006) , 0.05},
+    {"110", cv::Point(55, 1006) , 0.05},
+    {"110", cv::Point(55, 1006) , 0.05},
+    {"110", cv::Point(55, 1006) , 0.05},
+    {"110", cv::Point(55, 1006) , 0.05},
+    {"130", cv::Point(57, 996)  , 0.08},
+    {"139", cv::Point(128, 641) },
+    {"140", cv::Point(210, 687) },
+    {"105", cv::Point(41, 565)  , 0.1}
   };
 
   Screen screen;
@@ -252,6 +251,7 @@ int main() {
     auto tmpl_img = cv::imread("templates/" + command.temp + ".png");
     int h = tmpl_img.rows, w = tmpl_img.cols;
 
+    bool pushed = false;
     for (int count = 0; true; usleep(10 * 1000), ++count) {
       ssize_t len = read(0, buf, 1024);
       if (len < -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -273,32 +273,44 @@ int main() {
       }
 
       cv::Mat cap = screen.Capture();
-      cv::Mat result;
-      cv::matchTemplate(cap(cv::Rect(command.left_top, cv::Size(w, h))), tmpl_img, result, CV_TM_SQDIFF_NORMED);
       double min_val;
-      cv::Point top_left;
-      cv::minMaxLoc(result, &min_val, nullptr, &top_left);
+      if (command.left_top == kVoidPoint) {
+        cv::Mat result;
+        cv::matchTemplate(cap, tmpl_img, result, CV_TM_SQDIFF_NORMED);
+        cv::Point left_top;
+        cv::minMaxLoc(result, &min_val, nullptr, &left_top);
+        cap = cap(cv::Rect(left_top, cv::Size(w, h)));
+        if (min_val < command.threshold) {
+          command.left_top = left_top;
+          std::cout << "Left Top Found  " << left_top.x << ", " << left_top.y << std::endl;
+        }
+      } else {
+        cap = cap(cv::Rect(command.left_top, cv::Size(w, h)));
+        cv::Mat result;
+        cv::matchTemplate(cap, tmpl_img, result, CV_TM_SQDIFF_NORMED);
+        cv::minMaxLoc(result, &min_val);
+      }
       std::cout << min_val << ", " << command.threshold << std::endl;
 
       if (min_val < command.threshold) {
-        std::cout << ">>>>>> {\"" << command.temp << "\", cv::Point(" << top_left.x << ", " << top_left.y << "), " << std::endl;
-        ev.Touch(top_left.x + w/2, top_left.y + h/2);
+        ev.Touch(command.left_top.x + w/2, command.left_top.y + h/2);
+        pushed = true;
+        usleep(command.sleep_ms * 1000);
+        if (commands[i + 1].temp == command.temp || command.temp == "133_a")
+          goto next;
+      } else if (pushed) {
         goto next;
       } else if (command.repeat_point != kVoidPoint) {
-        for (int i = 0; i < 5; ++i) {
-          ev.Touch(command.repeat_point.x, command.repeat_point.y);
-          usleep(100 * 1000);
-        }
+        ev.Touch(command.repeat_point.x, command.repeat_point.y);
+        usleep(100 * 1000);
       }
 
       if (dump) {
-        cv::Point bottom_right(top_left.x + w, top_left.y + h);
-        cv::rectangle(cap, top_left, bottom_right, min_val < command.threshold ? cv::Scalar(0, 0, 255) : cv::Scalar(255, 0, 0), 2);
         snprintf(buf, 1024, "dump%03d.png", ++dump_id);
         cv::imwrite(buf, cap);
       }
 
-      if (count > 3) {
+      if (count > 3 && !pushed && command.repeat_point == kVoidPoint) {
         usleep(std::min(count * 100, 5000) * 1000);
       }
     }
