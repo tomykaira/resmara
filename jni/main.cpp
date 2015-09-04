@@ -125,7 +125,7 @@ Screen::Screen() {
 
 const double kThreshold = 0.03;
 const cv::Point kVoidPoint(-1, -1);
-const int kSleepMs = 100;
+const int kSleepMs = 200;
 
 struct Command {
   std::string temp;
@@ -186,7 +186,7 @@ int main() {
     {"119", cv::Point(503, 601) },
     {"120", cv::Point(83, 706)  },
     {"110", cv::Point(53, 993)  , kThreshold, cv::Point(10, 10)},
-    {"122", cv::Point(51, 976), kThreshold, kVoidPoint, 300},
+    {"122", cv::Point(51, 976), kThreshold, kVoidPoint, 500}, // 時間が原因ではない??
     {"123", cv::Point(116, 1011)},
     {"100", cv::Point(648, 1128)},
     {"101", cv::Point(179, 665) },
@@ -225,7 +225,6 @@ int main() {
     {"130", cv::Point(223, 594) },
     {"130", cv::Point(110, 594) , kThreshold, kVoidPoint, 500},
     {"123", cv::Point(236, 712) , 0.05, cv::Point(135, 1094)}, // プレゼント無反応対策
-    {"error_close", cv::Point(214, 594)}, // タイムアウトしました→閉じる。通常はスキップされる
     {"134", cv::Point(197, 611) },
     {"200", cv::Point(4, 916)   },
     {"110", cv::Point(55, 1006) , 0.05, kVoidPoint, 300},
@@ -239,6 +238,7 @@ int main() {
     {"105", cv::Point(41, 565)  , 0.1}
   };
   Command retry_command("retry", cv::Point(209, 664));
+  Command error_close("error_close", cv::Point(214, 594));// タイムアウトしました→閉じる。通常はスキップされる
 
   Screen screen;
   EventDevice ev;
@@ -300,18 +300,27 @@ int main() {
       } else {
         if (command.hit(cap)) {
           hit = true;
-        } else if (i > 0
-                   && commands[i-1].temp != "133_a" // 確実に1回だけ
-                   && commands[i-1].hit(cap)) {
-          i -= 1;
-          command = commands[i];
-          hit = true;
         } else if (i < count - 1
                    && command.temp != "003" // 003より前に004が画面に出ているが反応しない
                    && commands[i+1].temp != "133_a" // 確実に1回だけ
                    && commands[i+1].hit(cap)) {
           i += 1;
           command = commands[i];
+          hit = true;
+        } else if (i > 0
+                   && commands[i-1].temp != "133_a" // 確実に1回だけ
+                   && commands[i-1].hit(cap)) {
+          i -= 1;
+          command = commands[i];
+          hit = true;
+        // } else if (command.temp == "error_close"
+        //            && commands[i+2].hit(cap)) {
+        //   i += 2;
+        //   command = commands[i];
+        //   hit = true;
+        } else if (command.temp == "123" && error_close.hit(cap)) {
+          i -= 1;
+          command = error_close;
           hit = true;
         } else if (retry_command.hit(cap)) {
           command = retry_command;
