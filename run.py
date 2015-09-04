@@ -203,5 +203,5 @@ def capture():
         cv2.setMouseCallback('preview', save_roi)
         cv2.imshow('preview', img)
 
-run()
+capture()
 cv2.destroyAllWindows()

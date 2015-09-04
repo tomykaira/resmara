@@ -129,16 +129,33 @@ const int kSleepMs = 100;
 
 struct Command {
   std::string temp;
+  cv::Mat img;
   cv::Point left_top;
   double threshold;
   cv::Point repeat_point;
   int sleep_ms;
 
-  Command(std::string const& t, cv::Point const& lt, double h, cv::Point const& p, int s) : temp(t), left_top(lt), threshold(h), repeat_point(p), sleep_ms(s) {}
+  Command(std::string const& t, cv::Point const& lt, double h, cv::Point const& p, int s) :
+    temp(t),
+    img(cv::imread("templates/" + t + ".png")),
+    left_top(lt),
+    threshold(h),
+    repeat_point(p),
+    sleep_ms(s) {}
   Command(std::string const& t, cv::Point const& lt, double h, cv::Point const& p) : Command(t, lt, h, p, kSleepMs) {}
   Command(std::string const& t, cv::Point const& lt, double h) : Command(t, lt, h, kVoidPoint) {}
   Command(std::string const& t, cv::Point const& lt) : Command(t, lt, kThreshold) {}
+
+  bool hit(cv::Mat const& cap);
 };
+
+bool Command::hit(cv::Mat const& cap) {
+  cv::Mat roi = cap(cv::Rect(left_top, img.size()));
+  cv::Mat result;
+  cv::matchTemplate(roi, img, result, CV_TM_SQDIFF_NORMED);
+  assert(result.total() == 1);
+  return result.at<float>(0, 0) < threshold;
+}
 
 int main() {
   Command commands[] = {
@@ -169,11 +186,11 @@ int main() {
     {"119", cv::Point(503, 601) },
     {"120", cv::Point(83, 706)  },
     {"110", cv::Point(53, 993)  , kThreshold, cv::Point(10, 10)},
-    {"122", cv::Point(51, 976)  },
+    {"122", cv::Point(51, 976), kThreshold, kVoidPoint, 300},
     {"123", cv::Point(116, 1011)},
     {"100", cv::Point(648, 1128)},
     {"101", cv::Point(179, 665) },
-    {"118", cv::Point(52, 975)  },
+    {"118", cv::Point(52, 975) , kThreshold, kVoidPoint, 300},
     {"124", cv::Point(122, 975) },
     {"118", cv::Point(52, 975)  },
     {"125", cv::Point(529, 425) },
@@ -205,23 +222,23 @@ int main() {
     {"100", cv::Point(648, 1128)},
     {"101", cv::Point(179, 665) },
     {"137", cv::Point(655, 1212), 10e-4},
-    {"130", cv::Point(223, 594) }, // TODO: よくスキップされる
+    {"130", cv::Point(223, 594) },
     {"130", cv::Point(110, 594) , kThreshold, kVoidPoint, 500},
-    // {"201", cv::Point(133, 935) , kThreshold, },
-    // タイムアウトしました→閉じるが必要な場合がよくある
     {"123", cv::Point(236, 712) , 0.05, cv::Point(135, 1094)}, // プレゼント無反応対策
+    {"error_close", cv::Point(214, 594)}, // タイムアウトしました→閉じる。通常はスキップされる
     {"134", cv::Point(197, 611) },
     {"200", cv::Point(4, 916)   },
-    {"110", cv::Point(55, 1006) , 0.05},
-    {"110", cv::Point(55, 1006) , 0.05},
-    {"110", cv::Point(55, 1006) , 0.05},
-    {"110", cv::Point(55, 1006) , 0.05},
-    {"110", cv::Point(55, 1006) , 0.05},
-    {"130", cv::Point(57, 996)  , 0.08},
+    {"110", cv::Point(55, 1006) , 0.05, kVoidPoint, 300},
+    {"110", cv::Point(55, 1006) , 0.05, kVoidPoint, 300},
+    {"110", cv::Point(55, 1006) , 0.05, kVoidPoint, 300},
+    {"110", cv::Point(55, 1006) , 0.05, kVoidPoint, 300},
+    {"110", cv::Point(55, 1006) , 0.05, kVoidPoint, 300},
+    {"130", cv::Point(57, 996)  , 0.08, kVoidPoint, 300},
     {"139", cv::Point(128, 641) },
     {"140", cv::Point(210, 687) },
     {"105", cv::Point(41, 565)  , 0.1}
   };
+  Command retry_command("retry", cv::Point(209, 664));
 
   Screen screen;
   EventDevice ev;
@@ -246,10 +263,6 @@ int main() {
 
     std::cout << i << ". " << command.temp << std::endl;
 
-    auto tmpl_img = cv::imread("templates/" + command.temp + ".png");
-    int h = tmpl_img.rows, w = tmpl_img.cols;
-
-    bool pushed = false;
     for (int count = 0; true; usleep(10 * 1000), ++count) {
       ssize_t len = read(0, buf, 1024);
       if (len < -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -271,32 +284,44 @@ int main() {
       }
 
       cv::Mat cap = screen.Capture();
-      double min_val;
+      bool hit = false;
       if (command.left_top == kVoidPoint) {
         cv::Mat result;
-        cv::matchTemplate(cap, tmpl_img, result, CV_TM_SQDIFF_NORMED);
+        cv::matchTemplate(cap, command.img, result, CV_TM_SQDIFF_NORMED);
+        double min_val;
         cv::Point left_top;
         cv::minMaxLoc(result, &min_val, nullptr, &left_top);
-        cap = cap(cv::Rect(left_top, cv::Size(w, h)));
+        cap = cap(cv::Rect(left_top, command.img.size()));
         if (min_val < command.threshold) {
+          hit = true;
           command.left_top = left_top;
           std::cout << "Left Top Found  " << left_top.x << ", " << left_top.y << std::endl;
         }
       } else {
-        cap = cap(cv::Rect(command.left_top, cv::Size(w, h)));
-        cv::Mat result;
-        cv::matchTemplate(cap, tmpl_img, result, CV_TM_SQDIFF_NORMED);
-        cv::minMaxLoc(result, &min_val);
+        if (command.hit(cap)) {
+          hit = true;
+        } else if (i > 0
+                   && commands[i-1].temp != "133_a" // 確実に1回だけ
+                   && commands[i-1].hit(cap)) {
+          i -= 1;
+          command = commands[i];
+          hit = true;
+        } else if (i < count - 1
+                   && command.temp != "003" // 003より前に004が画面に出ているが反応しない
+                   && commands[i+1].temp != "133_a" // 確実に1回だけ
+                   && commands[i+1].hit(cap)) {
+          i += 1;
+          command = commands[i];
+          hit = true;
+        } else if (retry_command.hit(cap)) {
+          command = retry_command;
+          hit = true;
+        }
       }
-      std::cout << min_val << ", " << command.threshold << std::endl;
 
-      if (min_val < command.threshold) {
-        ev.Touch(command.left_top.x + w/2, command.left_top.y + h/2);
-        pushed = true;
+      if (hit) {
+        ev.Touch(command.left_top.x + command.img.cols/2, command.left_top.y + command.img.rows/2);
         usleep(command.sleep_ms * 1000);
-        if (commands[i + 1].temp == command.temp || command.temp == "133_a")
-          goto next;
-      } else if (pushed) {
         goto next;
       } else if (command.repeat_point != kVoidPoint) {
         ev.Touch(command.repeat_point.x, command.repeat_point.y);
@@ -308,7 +333,7 @@ int main() {
         cv::imwrite(buf, cap);
       }
 
-      if (count > 3 && !pushed && command.repeat_point == kVoidPoint) {
+      if (count > 3 && command.repeat_point == kVoidPoint) {
         usleep(std::min(count * 100, 5000) * 1000);
       }
     }
