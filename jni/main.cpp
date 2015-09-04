@@ -155,8 +155,7 @@ int main() {
     {"101", cv::Point(169, 665)  },
     {"104", cv::Point(60, 951)   },
     {"105", cv::Point(41, 565)   },
-    {"106", cv::Point(662, 1210) }, // よくスカるので何度もおす?
-    {"107", cv::Point(209, 611)  },
+    {"107", cv::Point(209, 611), kThreshold, cv::Point(662, 1210)}, // スキップをスカる対策
     {"100", cv::Point(648, 1128) },
     {"101", cv::Point(179, 665)  },
     {"108", cv::Point(659, 1113), 0.02},
@@ -200,17 +199,15 @@ int main() {
     {"132", cv::Point(302, 401), kThreshold, cv::Point(69, 1029) },
     {"133_a", cv::Point(156, 44)},
     {"133_a", cv::Point(156, 44)},
-    {"133_done", cv::Point(480, 1157)},
-    {"134", cv::Point(92, 611)  },
+    {"134", cv::Point(92, 611) , kThreshold, cv::Point(580, 1197)}, // done スカ対策
     {"135", cv::Point(224, 704) },
     {"134", cv::Point(227, 611) },
     {"100", cv::Point(648, 1128)},
     {"101", cv::Point(179, 665) },
     {"137", cv::Point(655, 1212), 10e-4},
     {"130", cv::Point(223, 594) },
-    {"130", cv::Point(110, 594) , kThreshold, kVoidPoint, 2000},
-    {"138", cv::Point(105, 1054)},
-    {"201", cv::Point(133, 935) },
+    {"130", cv::Point(110, 594) , kThreshold, kVoidPoint, 500},
+    {"201", cv::Point(133, 935) , kThreshold, cv::Point(135, 1094)}, // プレゼント無反応対策
     {"123", cv::Point(236, 712) , 0.05},
     {"134", cv::Point(197, 611) },
     {"200", cv::Point(4, 916)   },
