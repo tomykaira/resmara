@@ -1,6 +1,8 @@
 libs/
 obj/
 *.iws
+*.ipr
+*.iml
 assets/
 gen/
 src_images/
