@@ -304,12 +304,16 @@ int main() {
                    && command.temp != "003" // 003より前に004が画面に出ているが反応しない
                    && commands[i+1].temp != "133_a" // 確実に1回だけ
                    && commands[i+1].hit(cap)) {
+          std::cout << "skip +1" << std::endl;
           i += 1;
           command = commands[i];
           hit = true;
         } else if (i > 0
+                   && count > 3
                    && commands[i-1].temp != "133_a" // 確実に1回だけ
+                   && (commands[i-1].temp != "137" || commands[i].temp != "130") // 137 130 130 つづきで誤発動が多い
                    && commands[i-1].hit(cap)) {
+          std::cout << "back -1" << std::endl;
           i -= 1;
           command = commands[i];
           hit = true;
@@ -319,10 +323,12 @@ int main() {
         //   command = commands[i];
         //   hit = true;
         } else if (command.temp == "123" && error_close.hit(cap)) {
+          std::cout << "error back -1" << std::endl;
           i -= 1;
           command = error_close;
           hit = true;
         } else if (retry_command.hit(cap)) {
+          std::cout << "retry" << std::endl;
           command = retry_command;
           hit = true;
         }

@@ -1,0 +1,6 @@
+libs/
+obj/
+*.iws
+assets/
+gen/
+src_images/
