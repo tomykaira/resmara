@@ -1,6 +1,7 @@
 package com.example.rerun.app;
 
 import java.util.Arrays;
+import java.util.Date;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -17,7 +18,9 @@ public class MainActivity extends Activity {
         // http://themakeinfo.com/2015/05/building-android-root-app/
         if (Shell.SU.available()) {
             Shell.SU.run(Arrays.asList(
+                    "pkill res_mara",
                     "am force-stop jp.co.bandainamcoent.BNEI0242",
+                    "cp /data/data/jp.co.bandainamcoent.BNEI0242/shared_prefs/jp.co.bandainamcoent.BNEI0242.xml /sdcard/jp.xml" + new Date().getTime(),
                     "rm /data/data/jp.co.bandainamcoent.BNEI0242/shared_prefs/jp.co.bandainamcoent.BNEI0242.xml",
                     "cd /sdcard",
                     "nohup res_mara &"

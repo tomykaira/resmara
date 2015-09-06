@@ -157,7 +157,7 @@ bool Command::hit(cv::Mat const& cap) {
   return result.at<float>(0, 0) < threshold;
 }
 
-int main() {
+int main(int argc, char** argv) {
   Command commands[] = {
     {"000", cv::Point(233, 402), kThreshold, kVoidPoint, 1000},
     {"001", cv::Point(366, 428), kThreshold, cv::Point(360, 640)},
@@ -256,7 +256,11 @@ int main() {
   char buf[1024];
   int dump_id = 0;
 
-  for (int i = 0, count = sizeof(commands) / sizeof(commands[0]); i < count; ++i) {
+  int init_point = 0;
+  if (argc > 1) {
+    init_point = atoi(argv[1]);
+  }
+  for (int i = init_point, count = sizeof(commands) / sizeof(commands[0]); i < count; ++i) {
     Command command = commands[i];
     assert(command.temp.size() > 0);
     assert(command.threshold > 0);
