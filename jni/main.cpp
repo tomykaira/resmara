@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <cassert>
 #include <stdint.h>
+#include <sys/wait.h>
 
 #include <fcntl.h>
 #include <cstdio>
@@ -32,6 +33,8 @@ public:
     if (fd_ > 0)
       close(fd_);
   }
+  EventDevice(const EventDevice&) = delete;
+  EventDevice& operator=(const EventDevice&) = delete;
 
   bool SendEvent(__u16 type, __u16 code, __s32 value) const;
   bool Touch(int x, int y);
@@ -97,6 +100,8 @@ public:
     cv::cvtColor(buf_, cpy, CV_RGBA2BGR);
     return cpy;
   }
+  Screen(const Screen&) = delete;
+  Screen& operator=(const Screen&) = delete;
 
 private:
   cv::Size resolution_;
@@ -157,9 +162,8 @@ bool Command::hit(cv::Mat const& cap) {
   return result.at<float>(0, 0) < threshold;
 }
 
-int main(int argc, char** argv) {
+int run(Screen& screen, EventDevice& ev, int init_point = 0) {
   Command commands[] = {
-    {"000", cv::Point(233, 402), kThreshold, kVoidPoint, 1000},
     {"001", cv::Point(366, 428), kThreshold, cv::Point(360, 640)},
     {"002", cv::Point(56, 309)},
     {"003", cv::Point(161, 451)},
@@ -240,26 +244,9 @@ int main(int argc, char** argv) {
   Command retry_command("retry", cv::Point(209, 664));
   Command error_close("error_close", cv::Point(214, 594));// タイムアウトしました→閉じる。通常はスキップされる
 
-  Screen screen;
-  EventDevice ev;
-
-  int flag = fcntl(0, F_GETFL);
-  if (flag == -1) {
-    perror("error getting flags");
-    return 1;
-  }
-  flag = fcntl(0, F_SETFL, flag | O_NONBLOCK);
-  if (flag == -1) {
-    perror("error getting flags");
-    return 1;
-  }
   char buf[1024];
   int dump_id = 0;
 
-  int init_point = 0;
-  if (argc > 1) {
-    init_point = atoi(argv[1]);
-  }
   for (int i = init_point, count = sizeof(commands) / sizeof(commands[0]); i < count; ++i) {
     Command command = commands[i];
     assert(command.temp.size() > 0);
@@ -321,11 +308,6 @@ int main(int argc, char** argv) {
           i -= 1;
           command = commands[i];
           hit = true;
-        // } else if (command.temp == "error_close"
-        //            && commands[i+2].hit(cap)) {
-        //   i += 2;
-        //   command = commands[i];
-        //   hit = true;
         } else if (command.temp == "123" && error_close.hit(cap)) {
           std::cout << "error back -1" << std::endl;
           i -= 1;
@@ -359,4 +341,61 @@ int main(int argc, char** argv) {
   next:
     ;
   }
+  return 0;
+}
+
+bool run_command(const std::string& command) {
+  int ret = system(command.c_str());
+  if (ret != 0) {
+    std::cerr << command << " exited with " << ret << std::endl;
+    return false;
+  }
+  if (WIFSIGNALED(ret) &&
+      (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
+    return false;
+  return true;
+}
+
+int main(int argc, char** argv) {
+  Screen screen;
+  EventDevice ev;
+
+  // make stdin nonblocking
+  int flag = fcntl(0, F_GETFL);
+  if (flag == -1) {
+    perror("error getting flags");
+    return 1;
+  }
+  flag = fcntl(0, F_SETFL, flag | O_NONBLOCK);
+  if (flag == -1) {
+    perror("error getting flags");
+    return 1;
+  }
+
+  int init_point = 0;
+  if (argc > 1) {
+    init_point = atoi(argv[1]);
+  }
+  char buf[1024];
+  while (1) {
+    if (run(screen, ev, init_point)) {
+      return 1;
+    }
+    sleep(10);
+    time_t t = time(nullptr);
+    cv::Mat cap = screen.Capture();
+    snprintf(buf, 1024, "/sdcard/result%ld.png", t);
+    cv::imwrite(buf, cap);
+    if (!run_command("am force-stop jp.co.bandainamcoent.BNEI0242"))
+      return 1;
+    snprintf(buf, 1024, "cp /data/data/jp.co.bandainamcoent.BNEI0242/shared_prefs/jp.co.bandainamcoent.BNEI0242.xml /sdcard/data%ld.xml", t);
+    if (!run_command(std::string(buf)))
+      return 1;
+    if (!run_command("rm /data/data/jp.co.bandainamcoent.BNEI0242/shared_prefs/jp.co.bandainamcoent.BNEI0242.xml"))
+      return 1;
+    if (!run_command("monkey -p jp.co.bandainamcoent.BNEI0242 -c android.intent.category.LAUNCHER 1"))
+      return 1;
+    sleep(3);
+  }
+  return 0;
 }
