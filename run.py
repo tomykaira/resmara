@@ -173,7 +173,7 @@ def run():
                 time.sleep(3)
 
 img = None
-idx = 300
+idx = 1999
 
 ix,iy = -1,-1
 def save_roi(event,x,y,flags,param):
@@ -190,7 +190,7 @@ def save_roi(event,x,y,flags,param):
             t = iy
             iy = y
             y = t
-        print(ix, x, iy, y)
+        print(ix, iy)
         cv2.imwrite("templates/%03d.png" % idx, img[iy:y, ix:x])
         idx += 1
         #touch((ix + x)/2, (iy + y)/2)

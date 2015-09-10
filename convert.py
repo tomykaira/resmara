@@ -27,9 +27,9 @@ def save_roi(event,x,y,flags,param):
             iy = y
             y = t
         print(ix, x, iy, y)
-        cv2.imwrite(template_name, img[iy:y, ix:x])
+        #cv2.imwrite(template_name, img[iy:y, ix:x])
 
-for file in glob.glob('sources/128*.raw'):
+for file in glob.glob('src_images/201*.raw'):
     template_name = "templates/128.png"
     with open(file, 'rb') as fd:
         rows = parse_uint(fd.read(4))

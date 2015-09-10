@@ -220,7 +220,8 @@ int run(Screen& screen, EventDevice& ev, int init_point = 0) {
     {"132", cv::Point(302, 401), kThreshold, cv::Point(69, 1029) },
     {"133_a", cv::Point(156, 44)},
     {"133_a", cv::Point(156, 44)},
-    {"134", cv::Point(92, 611) , kThreshold, cv::Point(580, 1197)}, // done スカ対策
+    {"133_done", cv::Point(553, 1155), 0.1},
+    {"134", cv::Point(92, 611)},
     {"135", cv::Point(224, 704) },
     {"134", cv::Point(227, 611) },
     {"100", cv::Point(648, 1128)},
@@ -228,7 +229,7 @@ int run(Screen& screen, EventDevice& ev, int init_point = 0) {
     {"137", cv::Point(655, 1212), 10e-4},
     {"130", cv::Point(223, 594) },
     {"130", cv::Point(110, 594) , kThreshold, kVoidPoint, 500},
-    {"123", cv::Point(236, 712) , 0.05, cv::Point(135, 1094)}, // プレゼント無反応対策
+    {"123", cv::Point(236, 712) , 0.1, cv::Point(135, 1094)}, // プレゼント無反応対策
     {"134", cv::Point(197, 611) },
     {"200", cv::Point(4, 916)   },
     {"110", cv::Point(55, 1006) , 0.05, kVoidPoint, 300},
@@ -313,6 +314,14 @@ int run(Screen& screen, EventDevice& ev, int init_point = 0) {
           i -= 1;
           command = error_close;
           hit = true;
+        } else if (i > 0
+                   && commands[i-1].temp == "133_done"
+                   && commands[i-3].hit(cap)) { // 132: 空の名前入力画面
+          // a -> a -> done しても入力されていない場合
+          std::cout << "Retry name input from " << i - 3 << std::endl;
+          i -= 3;
+          command = commands[i];
+          hit = true;
         } else if (retry_command.hit(cap)) {
           std::cout << "retry" << std::endl;
           command = retry_command;
@@ -381,6 +390,7 @@ int main(int argc, char** argv) {
     if (run(screen, ev, init_point)) {
       return 1;
     }
+    init_point = 0;
     sleep(10);
     time_t t = time(nullptr);
     cv::Mat cap = screen.Capture();
