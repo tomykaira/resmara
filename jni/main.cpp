@@ -79,8 +79,6 @@ bool EventDevice::SendEvent(__u16 type, __u16 code, __s32 value) const {
 }
 
 bool EventDevice::Touch(int x, int y) {
-  std::cout << "t (" << x << ", " << y << ")" << std::endl;
-
   return SendEvent(3, 57, event_id_++)
     && SendEvent(3, 58, 29)
     && SendEvent(3, 53, x)
@@ -314,23 +312,30 @@ int run(Screen& screen, EventDevice& ev, int init_point = 0) {
           i -= 1;
           command = error_close;
           hit = true;
-        } else if (i > 0
-                   && commands[i-1].temp == "133_done"
-                   && commands[i-3].hit(cap)) { // 132: 空の名前入力画面
-          // a -> a -> done しても入力されていない場合
-          std::cout << "Retry name input from " << i - 3 << std::endl;
-          i -= 3;
-          command = commands[i];
-          hit = true;
         } else if (retry_command.hit(cap)) {
-          std::cout << "retry" << std::endl;
-          command = retry_command;
-          hit = true;
+            std::cout << "retry" << std::endl;
+            command = retry_command;
+            hit = true;
+        } else if(count > 20) { // すこし待ってから発動
+          if (!(commands[53].temp == "132" && commands[56].temp == "133_done" && commands[57].temp == "134" && commands[58].temp == "135")) {
+            std::cerr << "Offset around producer name input is changed. Fix them." << std::endl;
+            throw std::runtime_error("invalid offset");
+          }
+          // 名前ができないケースが多いので、入力後の位置で未入力状態だったら再試行する
+          if (56 <= i && i <= 58 && commands[53].hit(cap)) { // 132: 空の名前入力画面
+            std::cout << "Retry name input from " << i - 4 << std::endl;
+            i = 53;
+            command = commands[i];
+            hit = true;
+          }
         }
       }
 
       if (hit) {
-        ev.Touch(command.left_top.x + command.img.cols/2, command.left_top.y + command.img.rows/2);
+        int x = command.left_top.x + command.img.cols/2;
+        int y = command.left_top.y + command.img.rows/2;
+        std::cout << "exec " << i << "." << command.temp << " (" << x << ", " << y << ")" << std::endl;
+        ev.Touch(x, y);
         usleep(command.sleep_ms * 1000);
         goto next;
       } else if (command.repeat_point != kVoidPoint) {
