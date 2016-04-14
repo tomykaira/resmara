@@ -130,6 +130,11 @@ const double kThreshold = 0.03;
 const cv::Point kVoidPoint(-1, -1);
 const int kSleepMs = 200;
 
+enum Action {
+  ACTION_NONE = 0,
+  ACTION_SCREENSHOT
+};
+
 struct Command {
   std::string temp;
   cv::Mat img;
@@ -137,14 +142,28 @@ struct Command {
   double threshold;
   cv::Point repeat_point;
   int sleep_ms;
+  Action action;
 
   Command(std::string const& t, cv::Point const& lt, double h, cv::Point const& p, int s) :
-    temp(t),
-    img(cv::imread("templates/" + t + ".png")),
     left_top(lt),
     threshold(h),
     repeat_point(p),
-    sleep_ms(s) {}
+    sleep_ms(s),
+    action(ACTION_NONE) {
+
+    std::size_t pos = t.find("|");
+    if (pos == std::string::npos) {
+      temp = t;
+    } else {
+      temp = t.substr(0, pos);
+      std::string act = t.substr(pos + 1, std::string::npos);
+      if (act == "screenshot") {
+        action = ACTION_SCREENSHOT;
+      }
+    }
+    img = cv::imread("templates/" + temp + ".png");
+  }
+
   Command(std::string const& t, cv::Point const& lt, double h, cv::Point const& p) : Command(t, lt, h, p, kSleepMs) {}
   Command(std::string const& t, cv::Point const& lt, double h) : Command(t, lt, h, kVoidPoint) {}
   Command(std::string const& t, cv::Point const& lt) : Command(t, lt, kThreshold) {}
@@ -153,47 +172,54 @@ struct Command {
 };
 
 bool Command::hit(cv::Mat const& cap) {
-  cv::Mat roi = cap(cv::Rect(left_top, img.size()));
+  cv::Rect rect(left_top, img.size());
+  if (!(0 <= rect.x
+        && 0 <= rect.width
+        && rect.x + rect.width <= cap.cols
+        && 0 <= rect.y
+        && 0 <= rect.height
+        && rect.y + rect.height <= cap.rows))
+    return false;
+  cv::Mat roi = cap(rect);
   cv::Mat result;
   cv::matchTemplate(roi, img, result, CV_TM_SQDIFF_NORMED);
   assert(result.total() == 1);
   return result.at<float>(0, 0) < threshold;
 }
 
-int run(Screen& screen, EventDevice& ev, int init_point = 0) {
+int run(Screen& screen, EventDevice& ev, int init_point, time_t timestamp) {
   Command commands[] = {
-    {"001", cv::Point(366, 428), kThreshold, cv::Point(360, 640)},
-    {"002", cv::Point(56, 309)},
-    {"003", cv::Point(161, 451)},
+    {"new_game", cv::Point(277, 436), kThreshold, cv::Point(360, 640)},
+    {"google_play_cancel", cv::Point(243, 782)},
     {"004", cv::Point(148, 673)},
-    {"100", cv::Point(648, 1128)},
-    {"101", cv::Point(179, 665)},
-    {"102", cv::Point(74, 845), kThreshold, kVoidPoint, 500},
+    // {"100", cv::Point(648, 1128)},
+    // {"101", cv::Point(179, 665)},
+    {"102", cv::Point(74, 845), kThreshold, cv::Point(360, 640), 500},
     {"102", cv::Point(225, 703)  , kThreshold, kVoidPoint, 500},
-    {"100", cv::Point(648, 1128) },
-    {"101", cv::Point(169, 665)  },
-    {"104", cv::Point(60, 951)   },
+    // {"100", cv::Point(648, 1128) }, // TODO: スカりやすい
+    // {"101", cv::Point(169, 665)  },
+    {"104", cv::Point(60, 951), kThreshold, cv::Point(360, 640)},
     {"105", cv::Point(41, 565)   },
     {"107", cv::Point(209, 611), kThreshold, cv::Point(662, 1210)}, // スキップをスカる対策
-    {"100", cv::Point(648, 1128) },
-    {"101", cv::Point(179, 665)  },
-    {"108", cv::Point(659, 1113), 0.02},
+    // {"100", cv::Point(648, 1128) },
+    // {"101", cv::Point(179, 665)  },
+    {"108", cv::Point(659, 1113), 0.02, cv::Point(360, 640)},
     {"109", cv::Point(211, 708), 0.03},
     {"115", cv::Point(160, 608) , kThreshold, cv::Point(69, 1029)},
     {"116", cv::Point(50, 961)  },
     {"117", cv::Point(213, 495) },
-    {"100", cv::Point(648, 1128)},
-    {"101", cv::Point(179, 665) },
-    {"118", cv::Point(52, 975)  },
+    // {"100", cv::Point(648, 1128), kThreshold, kVoidPoint, 500}, // スキップ confirm でフリーズする
+    // {"101", cv::Point(179, 665) },
+    {"118", cv::Point(52, 975), kThreshold, cv::Point(360, 640)},
     {"119", cv::Point(503, 601) },
     {"120", cv::Point(83, 706)  },
     {"110", cv::Point(53, 993)  , kThreshold, cv::Point(10, 10)},
     {"122", cv::Point(51, 976), kThreshold, kVoidPoint, 500}, // 時間が原因ではない??
     {"123", cv::Point(116, 1011)},
-    {"100", cv::Point(648, 1128)},
-    {"101", cv::Point(179, 665) },
-    {"118", cv::Point(52, 975) , kThreshold, kVoidPoint, 300},
-    {"124", cv::Point(122, 975) },
+    // {"100", cv::Point(648, 1128)},
+    // {"101", cv::Point(179, 665) },
+    {"118", cv::Point(52, 975), kThreshold, cv::Point(360, 640), 300},
+    {"live_confirm", cv::Point(123, 999) },
     {"118", cv::Point(52, 975)  },
     {"125", cv::Point(529, 425) },
     {"110", cv::Point(53, 993)  },
@@ -203,28 +229,29 @@ int run(Screen& screen, EventDevice& ev, int init_point = 0) {
     {"127", cv::Point(81, 612)  },
     {"108", cv::Point(659, 1113)},
     {"109", cv::Point(211, 708) },
-    {"128", cv::Point(53, 1031) },
-    {"129", cv::Point(200, 613) },
+    {"after_live_ok", cv::Point(54, 1129) },
+    {"level_up_ok", cv::Point(166, 619) },
     {"130", cv::Point(82, 594)  },
     {"130", cv::Point(82, 594)  },
     {"130", cv::Point(82, 594)  },
     {"110", cv::Point(54, 993)  },
     {"111", cv::Point(260, 996) , kThreshold, kVoidPoint, 500},
     {"111", cv::Point(325, 996) },
-    {"100", cv::Point(648, 1128)},
-    {"101", cv::Point(179, 665) },
-    {"110", cv::Point(53, 993)  , 0.1},
+    // {"100", cv::Point(648, 1128)},
+    // {"101", cv::Point(179, 665) },
+    {"110", cv::Point(53, 993)  , 0.1, cv::Point(360, 640)},
     {"131", cv::Point(123, 676) },
     {"132", cv::Point(302, 401), kThreshold, cv::Point(69, 1029) },
-    {"133_a", cv::Point(156, 44)},
+    {"133_a", cv::Point(156, 44), 0.01},
     {"133_a", cv::Point(156, 44)},
     {"133_done", cv::Point(553, 1155), 0.1},
     {"134", cv::Point(92, 611)},
     {"135", cv::Point(224, 704) },
     {"134", cv::Point(227, 611) },
-    {"100", cv::Point(648, 1128)},
-    {"101", cv::Point(179, 665) },
-    {"137", cv::Point(655, 1212), 10e-4},
+    // {"100", cv::Point(648, 1128)},
+    // {"101", cv::Point(179, 665) },
+    {"restart_ok", cv::Point(218, 612), kThreshold, cv::Point(360, 640)},
+    {"login_next", cv::Point(664, 1217), 10e-4, cv::Point(360, 640)},
     {"130", cv::Point(223, 594) },
     {"130", cv::Point(110, 594) , kThreshold, kVoidPoint, 500},
     {"123", cv::Point(236, 712) , 0.1, cv::Point(135, 1094)}, // プレゼント無反応対策
@@ -238,7 +265,12 @@ int run(Screen& screen, EventDevice& ev, int init_point = 0) {
     {"130", cv::Point(57, 996)  , 0.08, kVoidPoint, 300},
     {"139", cv::Point(128, 641) },
     {"140", cv::Point(210, 687) },
-    {"105", cv::Point(41, 565)  , 0.1}
+    {"105", cv::Point(41, 565)  , 0.1, kVoidPoint, 5000},
+    {"|screenshot", kVoidPoint},
+    {"gacha_again", cv::Point(210, 413), kThreshold, cv::Point(360, 640)},
+    {"140", cv::Point(210, 687) },
+    {"105", cv::Point(41, 565)  , 0.1, kVoidPoint, 5000},
+    {"|screenshot", kVoidPoint}
   };
   Command retry_command("retry", cv::Point(209, 664));
   Command error_close("error_close", cv::Point(214, 594));// タイムアウトしました→閉じる。通常はスキップされる
@@ -275,7 +307,9 @@ int run(Screen& screen, EventDevice& ev, int init_point = 0) {
 
       cv::Mat cap = screen.Capture();
       bool hit = false;
-      if (command.left_top == kVoidPoint) {
+      if (command.temp == "") {
+        hit = true;
+      } else if (command.left_top == kVoidPoint) {
         cv::Mat result;
         cv::matchTemplate(cap, command.img, result, CV_TM_SQDIFF_NORMED);
         double min_val;
@@ -291,7 +325,10 @@ int run(Screen& screen, EventDevice& ev, int init_point = 0) {
         if (command.hit(cap)) {
           hit = true;
         } else if (i < count - 1
+                   && command.temp != "google_play_cancel"
                    && command.temp != "003" // 003より前に004が画面に出ているが反応しない
+                   && commands[i+1].temp != "119" // 118 と同時に画面にでている
+                   && commands[i+1].temp != "live_confirm" // 118 と同時に画面にでている
                    && commands[i+1].temp != "133_a" // 確実に1回だけ
                    && commands[i+1].hit(cap)) {
           std::cout << "skip +1" << std::endl;
@@ -316,11 +353,12 @@ int run(Screen& screen, EventDevice& ev, int init_point = 0) {
             std::cout << "retry" << std::endl;
             command = retry_command;
             hit = true;
+            i -= 1;
         } else if(count > 20) { // すこし待ってから発動
-          if (!(commands[53].temp == "132" && commands[56].temp == "133_done" && commands[57].temp == "134" && commands[58].temp == "135")) {
-            std::cerr << "Offset around producer name input is changed. Fix them." << std::endl;
-            throw std::runtime_error("invalid offset");
-          }
+          // if (!(commands[53].temp == "132" && commands[56].temp == "133_done" && commands[57].temp == "134" && commands[58].temp == "135")) {
+          //   std::cerr << "Offset around producer name input is changed. Fix them." << std::endl;
+          //   throw std::runtime_error("invalid offset");
+          // }
           // 名前ができないケースが多いので、入力後の位置で未入力状態だったら再試行する
           if (56 <= i && i <= 58 && commands[53].hit(cap)) { // 132: 空の名前入力画面
             std::cout << "Retry name input from " << i - 4 << std::endl;
@@ -332,10 +370,22 @@ int run(Screen& screen, EventDevice& ev, int init_point = 0) {
       }
 
       if (hit) {
-        int x = command.left_top.x + command.img.cols/2;
-        int y = command.left_top.y + command.img.rows/2;
-        std::cout << "exec " << i << "." << command.temp << " (" << x << ", " << y << ")" << std::endl;
-        ev.Touch(x, y);
+        switch (command.action) {
+        case ACTION_SCREENSHOT:
+          snprintf(buf, 1024, "/sdcard/result%ld-%d.png", timestamp, i);
+          std::cout << "screenshot " << buf << std::endl;
+          cv::imwrite(buf, cap);
+          break;
+        case ACTION_NONE:
+          break;
+        }
+
+        if (command.left_top != kVoidPoint) {
+          int x = command.left_top.x + command.img.cols/2;
+          int y = command.left_top.y + command.img.rows/2;
+          std::cout << "exec " << i << "." << command.temp << " (" << x << ", " << y << ")" << std::endl;
+          ev.Touch(x, y);
+        }
         usleep(command.sleep_ms * 1000);
         goto next;
       } else if (command.repeat_point != kVoidPoint) {
@@ -392,23 +442,21 @@ int main(int argc, char** argv) {
   }
   char buf[1024];
   while (1) {
-    if (run(screen, ev, init_point)) {
+    if (!run_command("pgrep jp.co.bandainamcoent.BNEI0242")) {
+      if (!run_command("monkey -p jp.co.bandainamcoent.BNEI0242 -c android.intent.category.LAUNCHER 1"))
+        return 1;
+    }
+    time_t t = time(nullptr);
+    if (run(screen, ev, init_point, t)) {
       return 1;
     }
     init_point = 0;
-    sleep(10);
-    time_t t = time(nullptr);
-    cv::Mat cap = screen.Capture();
-    snprintf(buf, 1024, "/sdcard/result%ld.png", t);
-    cv::imwrite(buf, cap);
     if (!run_command("am force-stop jp.co.bandainamcoent.BNEI0242"))
       return 1;
-    snprintf(buf, 1024, "cp /data/data/jp.co.bandainamcoent.BNEI0242/shared_prefs/jp.co.bandainamcoent.BNEI0242.xml /sdcard/data%ld.xml", t);
+    snprintf(buf, 1024, "cp /data/data/jp.co.bandainamcoent.BNEI0242/shared_prefs/jp.co.bandainamcoent.BNEI0242.xml /sdcard/result%ld.xml", t);
     if (!run_command(std::string(buf)))
       return 1;
     if (!run_command("rm /data/data/jp.co.bandainamcoent.BNEI0242/shared_prefs/jp.co.bandainamcoent.BNEI0242.xml"))
-      return 1;
-    if (!run_command("monkey -p jp.co.bandainamcoent.BNEI0242 -c android.intent.category.LAUNCHER 1"))
       return 1;
     sleep(3);
   }

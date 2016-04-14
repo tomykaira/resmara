@@ -4,12 +4,17 @@ sys.path.append('/home/tomita/local/lib/python2.7/site-packages')
 import glob
 import numpy as np
 import cv2
+import commands
+import datetime
 
 def parse_uint(arr):
     return (ord(arr[3]) << 24) | (ord(arr[2]) << 16) | (ord(arr[1]) << 8) | ord(arr[0])
 
-img = None
-template_name = None
+png = commands.getoutput('adb shell screencap -p | perl -pe \'s/\\x0D\\x0A/\\x0A/g\'')
+with open('test.png', 'wb') as f:
+    f.write(png)
+img = cv2.imdecode(np.fromstring(png, dtype=np.uint8), 1)
+template_name = sys.argv[1]
 
 ix,iy = -1,-1
 def save_roi(event,x,y,flags,param):
@@ -26,22 +31,11 @@ def save_roi(event,x,y,flags,param):
             t = iy
             iy = y
             y = t
-        print(ix, x, iy, y)
-        #cv2.imwrite(template_name, img[iy:y, ix:x])
+        print(ix, iy)
+        cv2.imwrite('templates/' + template_name + '.png', img[iy:y, ix:x])
 
-for file in glob.glob('src_images/201*.raw'):
-    template_name = "templates/128.png"
-    with open(file, 'rb') as fd:
-        rows = parse_uint(fd.read(4))
-        cols = parse_uint(fd.read(4))
-        depth = parse_uint(fd.read(4))
-        channels = 4
-        assert depth == 1
-        f = np.fromfile(fd, dtype=np.uint8,count=rows*cols*channels)
-        img = f.reshape((cols, rows, channels))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGBA)
-        cv2.namedWindow('preview')
-        cv2.setMouseCallback('preview', save_roi)
-        while cv2.waitKey(1) & 0xFF != 27:
-            cv2.imshow('preview', img)
-        cv2.destroyAllWindows()
+cv2.namedWindow('preview')
+cv2.setMouseCallback('preview', save_roi)
+while cv2.waitKey(1) & 0xFF != 27:
+    cv2.imshow('preview', img)
+cv2.destroyAllWindows()
